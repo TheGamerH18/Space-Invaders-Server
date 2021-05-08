@@ -79,6 +79,7 @@ public class MainServer extends Server {
             broadcastMessage(new Datapackage("POS", this.playerpos[0][0], this.playerpos[0][1], this.playerpos[1][0], this.playerpos[1][1]));
             System.out.println(Arrays.deepToString(this.playerpos));
         }
+        broadcastMessage(new Datapackage("GAME_INFO", 2));
         System.exit(1);
     }
 
