@@ -80,6 +80,9 @@ public class MainServer extends Server {
             System.out.println(Arrays.deepToString(this.playerpos));
         }
         broadcastMessage(new Datapackage("GAME_INFO", 2));
+        for(int i = 0; i < 2000; i ++) {
+            System.out.println("Pause");
+        }
         System.exit(1);
     }
 
