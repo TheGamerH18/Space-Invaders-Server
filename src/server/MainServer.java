@@ -8,7 +8,6 @@ import java.net.Socket;
 import java.util.Arrays;
 
 public class MainServer extends Server {
-    int playeramount = 2;
 
     String[] players = {"", ""};
 
