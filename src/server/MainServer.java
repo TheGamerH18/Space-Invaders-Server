@@ -5,12 +5,15 @@ import com.blogspot.debukkitsblog.net.Executable;
 import com.blogspot.debukkitsblog.net.Server;
 
 import java.net.Socket;
+import java.util.ArrayList;
 import java.util.Arrays;
 
 public class MainServer extends Server {
 
     String[] players = {"", ""};
 
+
+    ArrayList<int[]> shots = new ArrayList<>();
     // 0 = x, 1 = y
     public int[][] playerpos = {{270, 280}, {50, 280}};
 
@@ -20,6 +23,17 @@ public class MainServer extends Server {
 
     @Override
     public void preStart() {
+
+        registerMethod("NEW_SHOT", new Executable() {
+            @Override
+            public void run(Datapackage pack, Socket socket) {
+                // Pack Content: 1 = x Position, 2 = y Position
+                if(checkshotamount((int) pack.get(3))) {
+                    shots.add(new int[]{(int) pack.get(1), (int) pack.get(2), (int) pack.get(3)});
+                }
+                sendReply(socket, "Received");
+            }
+        });
 
         registerMethod("AUTH", new Executable() {
             @Override
@@ -62,6 +76,14 @@ public class MainServer extends Server {
         }
     }
 
+    private boolean checkshotamount(int userid) {
+        int count = 0;
+        for(int[] shot : shots) {
+            if(shot[2] == userid) count ++;
+        }
+        return count <= 5;
+    }
+
     private boolean checkuser() {
         return getClientCount() == 2;
     }
@@ -76,6 +98,19 @@ public class MainServer extends Server {
         broadcastMessage(new Datapackage("GAME_INFO", 1));
         while(checkuser()) {
             Thread.sleep(10);
+            for(int[] pos : playerpos){
+                if(pos[1] != 280) pos[1] = 280;
+                if(pos[0] <= 2 ) pos[0] = 2;
+                if(pos[0] >= 328) pos[0] = 328;
+            }
+            for(int i = 0; i < shots.size(); i ++) {
+                shots.get(i)[1] -= 4;
+                if(shots.get(i)[1] <= 0) {
+                    //noinspection SuspiciousListRemoveInLoop
+                    shots.remove(i);
+                }
+            }
+            broadcastMessage(new Datapackage("SHOTS", this.shots));
             broadcastMessage(new Datapackage("POS", this.playerpos[0][0], this.playerpos[0][1], this.playerpos[1][0], this.playerpos[1][1]));
             System.out.println(Arrays.deepToString(this.playerpos));
         }
