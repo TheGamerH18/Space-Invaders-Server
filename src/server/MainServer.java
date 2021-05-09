@@ -19,6 +19,7 @@ public class MainServer extends Server {
     public int[][] playerpos = {{270, 280}, {50, 280}};
 
     private int direction = -1;
+    private int deaths = 0;
 
     public MainServer() {
         super(25598, true, true, false, true);
@@ -94,17 +95,19 @@ public class MainServer extends Server {
     public void AlienMovement() {
         // Alien Movement
         for(int i = 0; i < aliens.size(); i ++) {
-            int x = aliens.get(i)[0];
-            if(x >= Commons.BOARD_WIDTH - Commons.BORDER_RIGHT && direction != -1) {
-                direction = -1;
-                for(int[] alien : aliens) {
-                    alien[1] += Commons.GO_DOWN;
+            if((aliens.get(i)[0] != -1) && (aliens.get(i)[1] != -1)){
+                int x = aliens.get(i)[0];
+                if(x >= Commons.BOARD_WIDTH - Commons.BORDER_RIGHT && direction != -1) {
+                    direction = -1;
+                    for(int[] alien : aliens) {
+                        alien[1] += Commons.GO_DOWN;
+                    }
                 }
-            }
-            if(x <= Commons.BORDER_LEFT && direction != 1) {
-                direction = 1;
-                for(int[] alien : aliens) {
-                    alien[1] += Commons.GO_DOWN;
+                if(x <= Commons.BORDER_LEFT && direction != 1) {
+                    direction = 1;
+                    for(int[] alien : aliens) {
+                        alien[1] += Commons.GO_DOWN;
+                    }
                 }
             }
         }
@@ -126,7 +129,7 @@ public class MainServer extends Server {
             for(int j = 0; j < 6; j ++) {
                 int x = Commons.ALIEN_INIT_X + 18 * j;
                 int y = Commons.ALIEN_INIT_Y + 18 * i;
-                aliens.add(new int[]{x, y});
+                aliens.add(new int[]{x, y, 0});
             }
         }
 
@@ -154,11 +157,27 @@ public class MainServer extends Server {
             }
 
             // Shot Movement and Removing, when Hitting Top
-            for(int i = 0; i < shots.size(); i ++) {
-                shots.get(i)[1] -= 4;
-                if(shots.get(i)[1] <= 0) {
-                    //noinspection SuspiciousListRemoveInLoop
-                    shots.remove(i);
+            if(shots.size() != 0) {
+                for(int i = 0; i < shots.size(); i ++) {
+                    shots.get(i)[1] -= 4;
+                    boolean removed = false;
+                    for(int[] alien : aliens) {
+                        if(!removed && alien[2] != 1
+                                && shots.get(i)[0] >= alien[0]
+                                && shots.get(i)[0] <= (alien[0] + Commons.ALIEN_WIDTH)
+                                && shots.get(i)[1] >= alien[1]
+                                && shots.get(i)[1] <= (alien[1] + Commons.ALIEN_HEIGHT))
+                        {
+                            alien[2] = 1;
+                            deaths ++;
+                            shots.remove(i);
+                            removed = true;
+                        }
+                    }
+                    if(!removed && shots.get(i)[1] <= 0) {
+                        //noinspection SuspiciousListRemoveInLoop
+                        shots.remove(i);
+                    }
                 }
             }
 
