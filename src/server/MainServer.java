@@ -218,8 +218,8 @@ public class MainServer extends Server {
                 }
             }
 
+            // Spawning and Movind Bombs
             Random generator = new Random();
-
             for(int i = 0; i < aliens.size(); i ++ ) {
                 int[] bomb = bombs.get(i);
                 if(generator.nextInt(80) == Commons.CHANCE && aliens.get(i)[2] == 0 && bombs.get(i)[2] == 0) {
