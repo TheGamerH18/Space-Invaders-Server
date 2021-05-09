@@ -8,6 +8,7 @@ import java.util.Random;
 
 @SuppressWarnings("BusyWait")
 public class MainServer extends Server {
+    final String version = "1.0.0";
 
     String[] players = {"", ""};
     private boolean ingame = false;
@@ -24,6 +25,7 @@ public class MainServer extends Server {
 
     public MainServer() {
         super(25598, true, true, false, true);
+        System.out.println(version);
     }
 
     @Override
