@@ -8,7 +8,7 @@ import java.util.Random;
 
 @SuppressWarnings("BusyWait")
 public class MainServer extends Server {
-    final String version = "1.0.0";
+    final String version = "0.5";
 
     String[] players = {"", ""};
     private boolean ingame = false;
