@@ -14,8 +14,11 @@ public class MainServer extends Server {
 
 
     ArrayList<int[]> shots = new ArrayList<>();
+    ArrayList<int[]> aliens = new ArrayList<>();
     // 0 = x, 1 = y
     public int[][] playerpos = {{270, 280}, {50, 280}};
+
+    private int direction = -1;
 
     public MainServer() {
         super(25598, true, true, false, true);
@@ -88,6 +91,28 @@ public class MainServer extends Server {
         return getClientCount() == 2;
     }
 
+    public void AlienMovement() {
+        // Alien Movement
+        for(int i = 0; i < aliens.size(); i ++) {
+            int x = aliens.get(i)[0];
+            if(x >= Commons.BOARD_WIDTH - Commons.BORDER_RIGHT && direction != -1) {
+                direction = -1;
+                for(int[] alien : aliens) {
+                    alien[1] += Commons.GO_DOWN;
+                }
+            }
+            if(x <= Commons.BORDER_LEFT && direction != 1) {
+                direction = 1;
+                for(int[] alien : aliens) {
+                    alien[1] += Commons.GO_DOWN;
+                }
+            }
+        }
+        for(int[] alien : aliens) {
+            alien[0] += direction;
+        }
+    }
+
     public void run() throws InterruptedException {
         while(!checkuser()){
             System.out.println("Not enough players");
@@ -96,13 +121,39 @@ public class MainServer extends Server {
         }
         System.out.println("Enough Players");
         broadcastMessage(new Datapackage("GAME_INFO", 1));
+
+        for(int i = 0; i < 4; i ++) {
+            for(int j = 0; j < 6; j ++) {
+                int x = Commons.ALIEN_INIT_X + 18 * j;
+                int y = Commons.ALIEN_INIT_Y + 18 * i;
+                aliens.add(new int[]{x, y});
+            }
+        }
+
+        Thread Aliens = new Thread(new Runnable() {
+            @Override
+            public void run() {
+                while(true) {
+                    AlienMovement();
+                    try {
+                        Thread.sleep(Commons.DELAY);
+                    } catch (InterruptedException ignored) {}
+                }
+            }
+        });
+        Aliens.start();
+
         while(checkuser()) {
             Thread.sleep(10);
+
+            // Securing Player Movement
             for(int[] pos : playerpos){
                 if(pos[1] != 280) pos[1] = 280;
                 if(pos[0] <= 2 ) pos[0] = 2;
                 if(pos[0] >= 328) pos[0] = 328;
             }
+
+            // Shot Movement and Removing, when Hitting Top
             for(int i = 0; i < shots.size(); i ++) {
                 shots.get(i)[1] -= 4;
                 if(shots.get(i)[1] <= 0) {
@@ -110,6 +161,8 @@ public class MainServer extends Server {
                     shots.remove(i);
                 }
             }
+
+            broadcastMessage(new Datapackage("ALIENS", this.aliens));
             broadcastMessage(new Datapackage("SHOTS", this.shots));
             broadcastMessage(new Datapackage("POS", this.playerpos[0][0], this.playerpos[0][1], this.playerpos[1][0], this.playerpos[1][1]));
             System.out.println(Arrays.deepToString(this.playerpos));
