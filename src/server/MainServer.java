@@ -1,12 +1,9 @@
 package server;
 
 import com.blogspot.debukkitsblog.net.Datapackage;
-import com.blogspot.debukkitsblog.net.Executable;
 import com.blogspot.debukkitsblog.net.Server;
 
-import java.net.Socket;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Random;
 
 @SuppressWarnings("BusyWait")
@@ -32,43 +29,34 @@ public class MainServer extends Server {
     @Override
     public void preStart() {
 
-        registerMethod("NEW_SHOT", new Executable() {
-            @Override
-            public void run(Datapackage pack, Socket socket) {
-                // Pack Content: 1 = x Position, 2 = y Position
-                if(checkshotamount((int) pack.get(3))) {
-                    shots.add(new int[]{(int) pack.get(1), (int) pack.get(2), (int) pack.get(3)});
-                }
-                sendReply(socket, "Received");
+        registerMethod("NEW_SHOT", (pack, socket) -> {
+            // Pack Content: 1 = x Position, 2 = y Position
+            if(checkshotamount((int) pack.get(3))) {
+                shots.add(new int[]{(int) pack.get(1), (int) pack.get(2), (int) pack.get(3)});
             }
+            sendReply(socket, "Received");
         });
 
-        registerMethod("AUTH", new Executable() {
-            @Override
-            public void run(Datapackage pack, Socket socket) {
-                // Pack Content: 1 = Username
-                int index = -1;
-                for(int i = 0; i < players.length; i ++){
-                    if(players[i].isEmpty()){
-                        players[i] = (String) pack.get(1);
-                        System.out.println(i);
-                        index = i;
-                        break;
-                    }
+        registerMethod("AUTH", (pack, socket) -> {
+            // Pack Content: 1 = Username
+            int index = -1;
+            for(int i = 0; i < players.length; i ++){
+                if(players[i].isEmpty()){
+                    players[i] = (String) pack.get(1);
+                    System.out.println(i);
+                    index = i;
+                    break;
                 }
-                sendReply(socket, index);
             }
+            sendReply(socket, index);
         });
 
-        registerMethod("POS", new Executable() {
-            @Override
-            public void run(Datapackage pack, Socket socket) {
-                // Pack Content: 1 = PlayerID, 2 = X Cord, 3 = Y Cord
-                int playerid = (int) pack.get(1);
-                playerpos[playerid][0] = (int) pack.get(2);
-                playerpos[playerid][1] = (int) pack.get(3);
-                sendReply(socket, "Received");
-            }
+        registerMethod("POS", (pack, socket) -> {
+            // Pack Content: 1 = PlayerID, 2 = X Cord, 3 = Y Cord
+            int playerid = (int) pack.get(1);
+            playerpos[playerid][0] = (int) pack.get(2);
+            playerpos[playerid][1] = (int) pack.get(3);
+            sendReply(socket, "Received");
         });
     }
 
@@ -77,7 +65,8 @@ public class MainServer extends Server {
         System.out.println(remoteClient.getId());
         for(String player : players) {
             if(player.equals(remoteClient.getId())) {
-                player = null;
+                //noinspection UnusedAssignment
+                player = "";
                 break;
             }
         }
@@ -92,16 +81,24 @@ public class MainServer extends Server {
     }
 
     private int checkuser() {
-        if(getClientCount() == 2) {
-            ingame = true;
-            return 1;
-        } else if(playerpos[0][2] == 1 && playerpos[1][2] == 1) {
-            return 3;
-        } else if(getClientCount() != 2 && ingame) {
-            return 2;
+        if(!ingame) {
+            if(getClientCount() == 2) {
+                ingame = true;
+                return 1;
+            } else if(getClientCount() != 2){
+                ingame = false;
+                return 0;
+            }
         } else {
-            return 0;
+            if(deaths == aliens.size()) {
+                return 3;
+            } else if(playerpos[0][2] == 0 && playerpos[1][2] == 0) {
+                return 4;
+            } else if(getClientCount() != 2) {
+                return 2;
+            }
         }
+        return 1;
     }
 
     public void AlienMovement() {
@@ -129,9 +126,7 @@ public class MainServer extends Server {
     }
 
     public void ClientSync() {
-        broadcastMessage(new Datapackage("BOMBS", this.bombs));
-        broadcastMessage(new Datapackage("ALIENS", this.aliens, this.shots));
-        broadcastMessage(new Datapackage("POS", this.playerpos[0][0], this.playerpos[0][1], this.playerpos[1][0], this.playerpos[1][1]));
+        broadcastMessage(new Datapackage("SYNC", this.aliens, this.shots, this.playerpos, this.bombs));
     }
 
     public void run() throws InterruptedException {
@@ -152,29 +147,23 @@ public class MainServer extends Server {
             }
         }
 
-        Thread Aliens = new Thread(new Runnable() {
-            @Override
-            public void run() {
-                while(true) {
-                    AlienMovement();
-                    try {
-                        Thread.sleep(Commons.DELAY);
-                    } catch (InterruptedException ignored) {}
-                }
+        Thread Aliens = new Thread(() -> {
+            while(true) {
+                AlienMovement();
+                try {
+                    Thread.sleep(Commons.DELAY);
+                } catch (InterruptedException ignored) {}
             }
         });
         Aliens.start();
 
-        Thread Sync = new Thread(new Runnable() {
-            @Override
-            public void run() {
-                while(true) {
-                    ClientSync();
-                    try {
-                        Thread.sleep(Commons.DELAY);
-                    } catch (InterruptedException e) {
-                        e.printStackTrace();
-                    }
+        Thread Sync = new Thread(() -> {
+            while(true) {
+                ClientSync();
+                try {
+                    Thread.sleep(Commons.DELAY);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
                 }
             }
         });
@@ -240,6 +229,7 @@ public class MainServer extends Server {
                     {
                         bomb[2] = 0;
                         player[2] = 0;
+                        System.out.println("dead");
                     }
                 }
                 // Move Bomb
@@ -250,9 +240,10 @@ public class MainServer extends Server {
                 bombs.set(i, bomb);
             }
         }
-        // noinspection InfiniteLoopStatement
-        while (true) {
+
+        while (getClientCount() != 0) {
             Sync.stop();
+            Aliens.stop();
             broadcastMessage(new Datapackage("GAME_INFO", checkuser()));
         }
     }
