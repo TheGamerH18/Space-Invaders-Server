@@ -9,10 +9,11 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Random;
 
+@SuppressWarnings("BusyWait")
 public class MainServer extends Server {
 
     String[] players = {"", ""};
-
+    private boolean ingame = false;
 
     ArrayList<int[]> shots = new ArrayList<>();
     ArrayList<int[]> aliens = new ArrayList<>();
@@ -90,8 +91,17 @@ public class MainServer extends Server {
         return count <= 5;
     }
 
-    private boolean checkuser() {
-        return getClientCount() == 2;
+    private int checkuser() {
+        if(getClientCount() == 2) {
+            ingame = true;
+            return 1;
+        } else if(playerpos[0][2] == 1 && playerpos[1][2] == 1) {
+            return 3;
+        } else if(getClientCount() != 2 && ingame) {
+            return 2;
+        } else {
+            return 0;
+        }
     }
 
     public void AlienMovement() {
@@ -125,7 +135,7 @@ public class MainServer extends Server {
     }
 
     public void run() throws InterruptedException {
-        while(!checkuser()){
+        while(checkuser() == 0){
             System.out.println("Not enough players");
             broadcastMessage(new Datapackage("GAME_INFO", 0));
             Thread.sleep(1000);
@@ -170,7 +180,7 @@ public class MainServer extends Server {
         });
         Sync.start();
 
-        while(checkuser()) {
+        while(checkuser() == 1) {
             Thread.sleep(10);
 
             // Securing Player Movement
@@ -243,7 +253,7 @@ public class MainServer extends Server {
         // noinspection InfiniteLoopStatement
         while (true) {
             Sync.stop();
-            broadcastMessage(new Datapackage("GAME_INFO", 2));
+            broadcastMessage(new Datapackage("GAME_INFO", checkuser()));
         }
     }
 
